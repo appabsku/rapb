@@ -74,7 +74,7 @@
   .table-wrap{max-height:420px; overflow-y:auto; margin-top:14px; border:1px solid var(--line); border-radius:8px;}
   table{width:100%; border-collapse:collapse; font-size:12.5px;}
   th,td{border:1px solid var(--line); padding:6px 8px; text-align:left;}
-  th{background:#eef5f1; position:sticky; top:0; z-index:1;}
+  th{background:#eef5f1; position:sticky; top:0; z-index:1; text-align:center;}
   td.num{text-align:right; font-variant-numeric:tabular-nums;}
   .row-head{background:#f8fafc; font-weight:700; color:var(--biru-tua);}
   .summary-list{list-style:none; margin:0; padding:0;}
@@ -150,7 +150,7 @@
       <h2>3. Beban Operasional (kolom tengah)</h2>
       <button class="secondary" id="copyBeban">Salin kolom nilai</button>
     </div>
-    <p class="sub">Semua baris di bawah "BEBAN OPERASIONAL" sampai sebelum "TOTAL BIAYA" (termasuk Beban Non Operasional) — cocokkan nama baris ini dengan nama baris di Spreadsheet, lalu isi nilainya. Baris <b>INSENTIF</b> = BIAYA INSENTIF + INSENTIF MANAGER.</p>
+    <p class="sub">Baris sudah diurutkan &amp; diberi nama sesuai kolom "Beban Umum &amp; Adm" di Spreadsheet, tinggal salin nilainya lalu tempel vertikal. Baris <b>INSENTIF</b> = BIAYA INSENTIF + INSENTIF MANAGER. Baris tanpa data di PDF bulan ini akan tampil 0.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Beban-Beban</th><th style="width:120px;">Nominal</th></tr></thead>
@@ -251,6 +251,7 @@
       namePart = namePart.replace(/^\d{6,10}\s+/, '').trim();
       namePart = namePart.replace(/[:\s]+$/, '').trim();
       if (!namePart) return;
+      if (!/[A-Za-z]/.test(namePart)) return; // baris garis pembatas / total tanpa nama
       const nums = moneyMatches.slice(-3);
       const toNum = s => parseFloat(s.replace(/\./g, '').replace(',', '.'));
       const kanan = toNum(nums[nums.length - 1]);
@@ -264,6 +265,82 @@
   function findLineIdx(allLines, regex) {
     return allLines.findIndex(l => regex.test(l.trim()));
   }
+
+  const BEBAN_TARGET_MAP = [
+    ['Basil Hutang Bank', ['=BEBAN BAGI HASIL PIHAK III NON ANGGOTA']],
+    ['Basil Sirela', ['=BEBAN BAGI HASIL SIMP.SUKARELA']],
+    ['Basil Berjangka', ['=BEBAN BAGI HASIL SIMP.BERJANGKA']],
+    ['SUBSIDI INDUK', ['=BY. SUBSIDI INDUK']],
+    ['Basil AKP (Modal Induk)', ['=BY - BAGI HASIL HUTANG MODAL IND']],
+    ['Seragam', []],
+    ['Bingkisan Lebaran', ['BINGKISAN LEBARAN']],
+    ['Listrik', ['=BIAYA LISTRIK']],
+    ['Telepon', ['=BIAYA TELEPON']],
+    ['Alat Tulis Kantor', ['ALAT TULIS KANTOR']],
+    ['Rumah Tangga Kantor', ['RUMAH TANGGA KANTOR']],
+    ['Barang Cetakan', ['BARANG CETAKAN']],
+    ['PAM dan Air Minum', ['PAM']],
+    ['Dinas/Operasional', ['DINAS']],
+    ['Fee Komisi Kredit', ['KOMISI KREDIT']],
+    ['Rapat', ['=BIAYA RAPAT']],
+    ['Ultah', []],
+    ['Pendidikan', []],
+    ['Hadiah Tabungan', ['HADIAH TABUNGAN']],
+    ['Hadiah Pembiayaan', ['HADIAH PEMBIAYAAN']],
+    ['Biaya Pefindo', ['PEFINDO']],
+    ['Beban Poin ABS MO', ['POIN ABS']],
+    ['Biaya Fee Agen ABS MO', ['FEE AGEN ABS']],
+    ['GAJI', ['GAJI']],
+    ['INSENTIF', ['INSENTIF']],
+    ['JAMSOSTEK', ['JAMSOSTEK']],
+    ['LEMBUR', ['LEMBUR']],
+    ['THR', ['THR']],
+    ['PESANGON', []],
+    ['Perawatan Gedung', ['PEMELIHARAAN DAN SEWA']],
+    ['Perawatan Kendaraan', ['PERAWATAN KENDARAAN']],
+    ['Perawatan Komputer dan Printer', ['PERAWATAN KOMPUTER']],
+    ['Perawatan AC', ['PERAWATAN AC']],
+    ['Perawatan Sewa program', []],
+    ['Peny Gedung/Sewa Gedung', ['PENYUSUTAN SEWA GEDUNG']],
+    ['Peny Inventaris', ['PENYUSUTAN INVENTARIS']],
+    ['Peny Perlengkapan', ['PENYUSUTAN PERLENGKAPAN']],
+    ['Peny Pra Pembuka', []],
+    ['Peny Renovasi Gedung', ['PENYUSUTAN RENOVASI']],
+    ['Sewa/Leasing', ['=BEBAN SEWA']],
+    ['PROMOSI', ['=BEBAN PROMOSI']],
+    ['PBB', ['PAJAK BUMI']],
+    ['Pajak Kendaraan', ['=BY - PAJAK KENDARAAN']],
+    ['Pajak Pasal 25', ['PASAL 25']],
+    ['Pajak Pasal 21 & 23', ['PASAL 21']],
+    ['Pajak pasal 29', []],
+    ['Pajak Reklame', []],
+    ['Kerugian Penjualan Aktiva', []],
+    ['SUMBANGAN', ['SUMBANGAN']],
+    ['RAT', []],
+    ['CRK/RESIKO KREDIT', ['RESIKO KREDIT']],
+  ];
+
+  function matchBebanValue(specs, bebanRawRows) {
+    let total = 0;
+    specs.forEach(s => {
+      if (s.startsWith('=')) {
+        const target = s.slice(1);
+        bebanRawRows.forEach(r => { if (r.name.toUpperCase() === target) total += (r.tengah || 0); });
+      } else {
+        bebanRawRows.forEach(r => { if (r.name.toUpperCase().includes(s)) total += (r.tengah || 0); });
+      }
+    });
+    return total;
+  }
+
+  function buildOrderedBeban(bebanRawRows, insentifManagerRow) {
+    return BEBAN_TARGET_MAP.map(([label, specs]) => {
+      let value = matchBebanValue(specs, bebanRawRows);
+      if (label === 'INSENTIF') value += insentifManagerRow ? (insentifManagerRow.tengah || 0) : 0;
+      return { name: label, tengah: value };
+    });
+  }
+
 
   function sumWhere(rows, pred) {
     return rows.filter(pred).reduce((acc, r) => acc + (r.tengah || 0), 0);
@@ -290,15 +367,10 @@
     const bebanStart = findLineIdx(allLines, /^BEBAN OPERASIONAL$/i);
     const bebanEnd = findLineIdx(allLines, /^TOTAL BIAYA/i);
     const insentifManagerRow = rows.find(r => r.name.toUpperCase() === 'INSENTIF MANAGER');
-    const beban = (bebanStart > -1 && bebanEnd > bebanStart)
-      ? rows.filter(r => r.idx > bebanStart && r.idx < bebanEnd).map(r => {
-          if (r.name.toUpperCase() === 'BIAYA INSENTIF') {
-            const manager = insentifManagerRow ? (insentifManagerRow.tengah || 0) : 0;
-            return { name: 'INSENTIF', tengah: (r.tengah || 0) + manager };
-          }
-          return { name: r.name, tengah: r.tengah };
-        })
+    const bebanRawRows = (bebanStart > -1 && bebanEnd > bebanStart)
+      ? rows.filter(r => r.idx > bebanStart && r.idx < bebanEnd)
       : [];
+    const beban = buildOrderedBeban(bebanRawRows, insentifManagerRow);
 
     return { pendapatan, beban };
   }
@@ -308,7 +380,7 @@
     const tbody = document.getElementById('pendapatanBody');
     tbody.innerHTML = '';
     list.forEach(item => {
-      const valStr = item.value === null ? '(kosong)' : fmtID(item.value);
+      const valStr = item.value === null ? '0' : fmtID(item.value);
       const tr = document.createElement('tr');
       tr.innerHTML = '<td>' + escapeHtml(item.label) + '</td><td class="num">' + valStr + '</td>';
       tbody.appendChild(tr);
@@ -330,15 +402,15 @@
 
   document.getElementById('copyPendapatan').addEventListener('click', async () => {
     if (!lastPendapatan) return;
-    const text = lastPendapatan.map(it => it.value === null ? '' : String(Math.round(it.value))).join('\n');
+    const text = lastPendapatan.map(it => it.value === null ? '0' : String(Math.round(it.value))).join('\n');
     try { await navigator.clipboard.writeText(text); showToast('Tersalin -- tempel vertikal di kolom REAL.'); }
     catch (e) { showToast('Gagal menyalin: ' + e.message); }
   });
 
   document.getElementById('copyBeban').addEventListener('click', async () => {
     if (!lastBeban.length) return;
-    const text = lastBeban.map(r => (r.tengah === null ? '' : String(Math.round(r.tengah))) + '\t' + r.name).join('\n');
-    try { await navigator.clipboard.writeText(text); showToast('Tersalin -- nilai + nama baris, siap dicocokkan.'); }
+    const text = lastBeban.map(r => (r.tengah === null ? '' : String(Math.round(r.tengah)))).join('\n');
+    try { await navigator.clipboard.writeText(text); showToast('Tersalin -- nilai saja, siap tempel vertikal.'); }
     catch (e) { showToast('Gagal menyalin: ' + e.message); }
   });
 
