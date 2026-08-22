@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHU Mapper — KSPPS Artha Bahana Syariah</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<style>
+  :root{
+    --biru-tua:#003c71;
+    --biru:#00529c;
+    --biru-terang:#0072ce;
+    --emas:#f2a900;
+    --emas-muda:#ffd166;
+    --abu-bg:#eef1f5;
+    --putih:#ffffff;
+    --teks:#1c2b39;
+    --teks-muted:#6b7b8c;
+    --hijau:#1a8a4a;
+    --merah:#d63447;
+    --garis:#dbe3ea;
+    --cyan:#00b8d9; --green:#1a8a4a;
+    --radius:10px;
+    --ink:var(--teks); --paper:var(--abu-bg); --card:var(--putih); --line:var(--garis);
+    --accent:var(--biru); --accent-dark:var(--biru-tua); --muted:var(--teks-muted);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:'Segoe UI',system-ui,Arial,sans-serif; background:var(--paper); color:var(--ink);}
+  header{
+    background:linear-gradient(135deg,var(--biru-tua) 0%, var(--biru) 60%, var(--biru-terang) 100%);
+    color:#fff; padding:28px 20px 40px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,.15);
+  }
+  header .brand-row{display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;}
+  header .mark{
+    width:40px;height:40px;border-radius:10px; background:var(--emas);
+    display:flex;align-items:center;justify-content:center; font-weight:800;color:var(--biru-tua);font-size:18px;
+  }
+  header h1{margin:0 0 6px; font-size:24px; letter-spacing:.2px;}
+  header p{margin:0; opacity:.85; font-size:13.5px;}
+  main{max-width:760px; margin:-26px auto 60px; padding:0 20px;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:26px; box-shadow:0 10px 30px -18px rgba(10,60,45,.35); margin-bottom:20px;
+  }
+  .card h2{margin:0 0 4px; font-size:16px; color:var(--biru-tua);}
+  .card .sub{margin:0 0 16px; font-size:12.5px; color:var(--muted);}
+  .drop{
+    border:2px dashed var(--line); border-radius:12px; padding:30px 20px; text-align:center;
+    cursor:pointer; transition:.15s border-color,.15s background; display:block;
+  }
+  .drop.drag{border-color:var(--biru-terang); background:#eef6ff;}
+  .drop input{display:none;}
+  .drop .hint{font-size:13px; color:var(--muted); margin-top:6px;}
+  .filename{margin-top:12px; font-size:13.5px; color:var(--accent-dark); font-weight:600;}
+  button{
+    margin-top:16px; width:100%; padding:13px; border:none; border-radius:9px;
+    background:linear-gradient(135deg, var(--emas) 0%, var(--emas-muda) 100%);
+    color:var(--biru-tua); font-size:15px; font-weight:800; cursor:pointer;
+    box-shadow:0 3px 8px rgba(242,169,0,.35); transition:.15s transform,.15s box-shadow;
+  }
+  button:hover:not(:disabled){transform:translateY(-1px); box-shadow:0 5px 12px rgba(242,169,0,.45);}
+  button:disabled{opacity:.45; cursor:default; box-shadow:none; transform:none;}
+  button.secondary{
+    background:#eef1f5; color:var(--biru-tua); box-shadow:none; border:1px solid var(--line);
+    font-size:12.5px; font-weight:700; padding:9px 14px; width:auto; margin-top:0;
+  }
+  button.secondary:hover:not(:disabled){background:#e3e8ee; transform:none; box-shadow:none;}
+  #status{margin-top:14px; font-size:13.5px; white-space:pre-wrap; line-height:1.5; color:var(--muted);}
+  .table-wrap{max-height:420px; overflow-y:auto; margin-top:14px; border:1px solid var(--line); border-radius:8px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  th,td{border:1px solid var(--line); padding:6px 8px; text-align:left;}
+  th{background:#eef5f1; position:sticky; top:0; z-index:1;}
+  td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .row-head{background:#f8fafc; font-weight:700; color:var(--biru-tua);}
+  .summary-list{list-style:none; margin:0; padding:0;}
+  .summary-list li{
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    padding:9px 0; border-top:1px solid var(--line); font-size:13.5px;
+  }
+  .summary-list li:first-child{border-top:none;}
+  .summary-list .lbl{color:var(--ink); font-weight:600;}
+  .summary-list .val{font-variant-numeric:tabular-nums; font-weight:700; color:var(--biru-tua); white-space:nowrap;}
+  .summary-list .val.empty{color:var(--muted); font-weight:500;}
+  .card-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px;}
+  .card-head h2{margin:0;}
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--biru-tua); color:#fff; padding:10px 18px; border-radius:20px;
+    font-size:12.5px; font-weight:600; opacity:0; pointer-events:none; transition:.2s all; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .hidden{display:none;}
+  .note{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.5;}
+  code{background:#eef3f0; padding:1px 5px; border-radius:4px; font-size:11px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand-row">
+    <div class="mark">AB</div>
+    <div>
+      <h1>PHU Mapper</h1>
+      <p>Ekstrak PENDAPATAN &amp; BEBAN dari PDF PHU — siap tempel ke Spreadsheet REAL bulanan</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>1. Upload PDF PHU</h2>
+    <p class="sub">File "PERHITUNGAN HASIL USAHA/PHU" bulanan (format sama seperti yang dipakai KSPPS Artha Bahana Syariah).</p>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".pdf,application/pdf">
+      <div><strong>Klik atau seret file PDF</strong> ke sini</div>
+      <div class="hint">Contoh: SALDO_PERKIRAAN_B_LABA_RUGI_YYYYMMDD.PDF</div>
+      <div class="filename" id="filename"></div>
+    </label>
+    <button id="run" disabled>Proses PDF</button>
+    <div id="status"></div>
+  </div>
+
+  <div class="card hidden" id="cardPendapatan">
+    <div class="card-head">
+      <h2>2. Ringkasan Pendapatan (kolom tengah)</h2>
+      <button class="secondary" id="copyPendapatan">Salin (urut, siap tempel)</button>
+    </div>
+    <p class="sub">Urutan sesuai kolom di Spreadsheet REAL. "Nisbah Hapus Buku" &amp; "Basil AKA Pusat" selalu dikosongkan sesuai aturan.</p>
+    <ul class="summary-list" id="pendapatanList"></ul>
+    <div class="note">
+      Rumus: <b>Nisbah Pembiayaan</b> = jumlah semua baris <code>NISBAH/BASIL...</code> ·
+      <b>Provisi</b> = jumlah semua baris <code>PROVISI&amp;ADM. PBY...</code> ·
+      <b>PPJ</b> = baris <code>PDPT - BAGI HASIL PERPANJANGAN</code> ·
+      <b>Penalty dll</b> = Pynalti Simp Berjangka + Adm Simpanan + Tutup Rekening + PPOB ABS + Fee Transfer via PG ·
+      <b>Non Operasional Lainnya</b> = baris <code>PENDAPATAN LAINNYA</code>. Semua diambil dari kolom tengah.
+    </div>
+  </div>
+
+  <div class="card hidden" id="cardBeban">
+    <div class="card-head">
+      <h2>3. Beban Operasional (kolom tengah)</h2>
+      <button class="secondary" id="copyBeban">Salin kolom nilai</button>
+    </div>
+    <p class="sub">Semua baris di bawah "BEBAN OPERASIONAL" sampai sebelum "BEBAN NON OPERASIONAL" — cocokkan nama baris ini dengan nama baris di Spreadsheet, lalu isi nilainya.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nama Baris</th><th style="width:120px;">Kolom Tengah</th></tr></thead>
+        <tbody id="bebanBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+  const fileInput = document.getElementById('file');
+  const drop = document.getElementById('drop');
+  const runBtn = document.getElementById('run');
+  const statusEl = document.getElementById('status');
+  const filenameEl = document.getElementById('filename');
+  let selectedFile = null;
+  let lastPendapatan = null; // ordered array for copy
+  let lastBeban = [];        // [{name, tengah}]
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('drag');
+    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if (e.target.files.length) setFile(e.target.files[0]); });
+
+  function setFile(f) {
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    if (ext !== 'pdf') {
+      statusEl.textContent = 'Format tidak didukung -- hanya PDF.';
+      filenameEl.textContent = ''; runBtn.disabled = true; selectedFile = null; return;
+    }
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      statusEl.textContent = 'File terlalu besar.';
+      filenameEl.textContent = ''; runBtn.disabled = true; selectedFile = null; return;
+    }
+    selectedFile = f; filenameEl.textContent = f.name; statusEl.textContent = ''; runBtn.disabled = false;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  function fmtID(num) {
+    if (num === null || num === undefined) return '';
+    return new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ---------- PDF -> baris teks (reconstruct rows by Y/X coordinate) ----------
+  async function extractLines(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const allLines = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const items = content.items
+        .map(it => ({ text: it.str, x: it.transform[4], y: it.transform[5] }))
+        .filter(it => it.text && it.text.trim().length > 0);
+      items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+      const Y_TOL = 3;
+      let currentLine = null; const lines = [];
+      items.forEach(it => {
+        if (currentLine && Math.abs(currentLine.y - it.y) <= Y_TOL) {
+          currentLine.items.push(it);
+        } else {
+          currentLine = { y: it.y, items: [it] }; lines.push(currentLine);
+        }
+      });
+      lines.forEach(line => {
+        line.items.sort((a, b) => a.x - b.x);
+        const text = line.items.map(i => i.text).join(' ').replace(/\s+/g, ' ').trim();
+        if (text) allLines.push(text);
+      });
+    }
+    return allLines;
+  }
+
+  // ---------- baris teks -> {name, kiri, tengah, kanan, idx} ----------
+  function parseRows(allLines) {
+    const MONEY_RE = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
+    const rows = [];
+    allLines.forEach((line, idx) => {
+      const moneyMatches = line.match(MONEY_RE);
+      if (!moneyMatches || moneyMatches.length < 2) return;
+      const firstIdx = line.search(MONEY_RE);
+      let namePart = line.substring(0, firstIdx).trim();
+      namePart = namePart.replace(/^\d{6,10}\s+/, '').trim();
+      namePart = namePart.replace(/[:\s]+$/, '').trim();
+      if (!namePart) return;
+      const nums = moneyMatches.slice(-3);
+      const toNum = s => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+      const kanan = toNum(nums[nums.length - 1]);
+      const tengah = nums.length >= 2 ? toNum(nums[nums.length - 2]) : null;
+      const kiri = nums.length >= 3 ? toNum(nums[nums.length - 3]) : null;
+      rows.push({ name: namePart, kiri, tengah, kanan, idx });
+    });
+    return rows;
+  }
+
+  function findLineIdx(allLines, regex) {
+    return allLines.findIndex(l => regex.test(l.trim()));
+  }
+
+  function sumWhere(rows, pred) {
+    return rows.filter(pred).reduce((acc, r) => acc + (r.tengah || 0), 0);
+  }
+
+  function classify(allLines, rows) {
+    const nisbahPembiayaan = sumWhere(rows, r => /^NISBAH\/BASIL/i.test(r.name));
+    const provisi = sumWhere(rows, r => /^PROVISI&ADM/i.test(r.name));
+    const ppj = sumWhere(rows, r => /PERPANJANGAN/i.test(r.name));
+    const penaltyKeys = ['PYNALTI SIMP BERJANGKA', 'ADMINISTRASI SIMPANAN', 'TUTUP REKENING', 'PPOB ABS', 'FEE TRANSFER VIA PG'];
+    const penalty = sumWhere(rows, r => penaltyKeys.some(k => r.name.toUpperCase().includes(k)));
+    const nonOperLain = sumWhere(rows, r => r.name.toUpperCase() === 'PENDAPATAN LAINNYA');
+
+    const pendapatan = [
+      { label: 'Nisbah Pembiayaan', value: nisbahPembiayaan },
+      { label: 'Provisi', value: provisi },
+      { label: 'PPJ', value: ppj },
+      { label: 'Penalty, Adm Simp, Gnti Bk, Ttp Rek, dll', value: penalty },
+      { label: 'Nisbah Hapus Buku', value: null },
+      { label: 'Basil AKA Pusat', value: null },
+      { label: 'Non Operasional Lainnya', value: nonOperLain },
+    ];
+
+    const bebanStart = findLineIdx(allLines, /^BEBAN OPERASIONAL$/i);
+    let bebanEnd = findLineIdx(allLines, /^BEBAN NON OPERASIONAL$/i);
+    if (bebanEnd === -1) bebanEnd = findLineIdx(allLines, /^TOTAL BIAYA/i);
+    const beban = (bebanStart > -1 && bebanEnd > bebanStart)
+      ? rows.filter(r => r.idx > bebanStart && r.idx < bebanEnd).map(r => ({ name: r.name, tengah: r.tengah }))
+      : [];
+
+    return { pendapatan, beban };
+  }
+
+  function renderPendapatan(list) {
+    lastPendapatan = list;
+    const ul = document.getElementById('pendapatanList');
+    ul.innerHTML = '';
+    list.forEach(item => {
+      const li = document.createElement('li');
+      const valStr = item.value === null ? '(kosong)' : fmtID(item.value);
+      li.innerHTML = '<span class="lbl">' + escapeHtml(item.label) + '</span>' +
+        '<span class="val' + (item.value === null ? ' empty' : '') + '">' + valStr + '</span>';
+      ul.appendChild(li);
+    });
+    document.getElementById('cardPendapatan').classList.remove('hidden');
+  }
+
+  function renderBeban(list) {
+    lastBeban = list;
+    const tbody = document.getElementById('bebanBody');
+    tbody.innerHTML = '';
+    list.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + escapeHtml(r.name) + '</td><td class="num">' + fmtID(r.tengah) + '</td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('cardBeban').classList.remove('hidden');
+  }
+
+  document.getElementById('copyPendapatan').addEventListener('click', async () => {
+    if (!lastPendapatan) return;
+    const text = lastPendapatan.map(it => it.value === null ? '' : it.value.toFixed(2).replace('.', ',')).join('\n');
+    try { await navigator.clipboard.writeText(text); showToast('Tersalin -- tempel vertikal di kolom REAL.'); }
+    catch (e) { showToast('Gagal menyalin: ' + e.message); }
+  });
+
+  document.getElementById('copyBeban').addEventListener('click', async () => {
+    if (!lastBeban.length) return;
+    const text = lastBeban.map(r => (r.tengah === null ? '' : r.tengah.toFixed(2).replace('.', ',')) + '\t' + r.name).join('\n');
+    try { await navigator.clipboard.writeText(text); showToast('Tersalin -- nilai + nama baris, siap dicocokkan.'); }
+    catch (e) { showToast('Gagal menyalin: ' + e.message); }
+  });
+
+  runBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    runBtn.disabled = true;
+    statusEl.textContent = 'Membaca PDF...';
+    try {
+      const allLines = await extractLines(selectedFile);
+      const rows = parseRows(allLines);
+      if (!rows.length) throw new Error('Tidak ada baris data yang terbaca -- pastikan PDF berisi teks (bukan hasil scan).');
+      const { pendapatan, beban } = classify(allLines, rows);
+      renderPendapatan(pendapatan);
+      renderBeban(beban);
+      statusEl.textContent = 'Selesai. ' + rows.length + ' baris data terbaca, ' + beban.length + ' baris Beban Operasional ditemukan.';
+    } catch (err) {
+      statusEl.textContent = 'Gagal: ' + err.message;
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
