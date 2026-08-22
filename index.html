@@ -320,6 +320,18 @@
     ['CRK/RESIKO KREDIT', ['RESIKO KREDIT']],
   ];
 
+  function extractLabeledLine(allLines, labelRegex) {
+    const MONEY_RE = /-?\d{1,3}(?:\.\d{3})*,\d{2}/g;
+    const line = allLines.find(l => labelRegex.test(l));
+    if (!line) return null;
+    const nums = line.match(MONEY_RE);
+    if (!nums || nums.length < 2) return null;
+    const toNum = s => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+    const arr = nums.slice(-3);
+    const tengah = arr.length >= 2 ? toNum(arr[arr.length - 2]) : null;
+    return { tengah };
+  }
+
   function matchBebanValue(specs, bebanRawRows) {
     let total = 0;
     specs.forEach(s => {
@@ -366,7 +378,7 @@
 
     const bebanStart = findLineIdx(allLines, /^BEBAN OPERASIONAL$/i);
     const bebanEnd = findLineIdx(allLines, /^TOTAL BIAYA/i);
-    const insentifManagerRow = rows.find(r => r.name.toUpperCase() === 'INSENTIF MANAGER');
+    const insentifManagerRow = extractLabeledLine(allLines, /INSENTIF MANAGER/i);
     const bebanRawRows = (bebanStart > -1 && bebanEnd > bebanStart)
       ? rows.filter(r => r.idx > bebanStart && r.idx < bebanEnd)
       : [];
