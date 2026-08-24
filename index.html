@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PHU Mapper — KSPPS Artha Bahana Syariah</title>
+<title>RAPB BULANAN — KSPPS Artha Bahana Syariah</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
   if (window.pdfjsLib) {
@@ -104,8 +104,7 @@
   <div class="brand-row">
     <div class="mark">AB</div>
     <div>
-      <h1>PHU Mapper</h1>
-      <p>Ekstrak PENDAPATAN &amp; BEBAN dari PDF PHU — siap tempel ke Spreadsheet REAL bulanan</p>
+      <h1>RAPB BULANAN</h1>
     </div>
   </div>
 </header>
@@ -126,35 +125,38 @@
 
   <div class="card hidden" id="cardPendapatan">
     <div class="card-head">
-      <h2>2. PENDAPATAN (kolom tengah)</h2>
-      <button class="secondary" id="copyPendapatan">Salin (urut, siap tempel)</button>
+      <h2>2. PENDAPATAN</h2>
+      <button class="secondary" id="copyPendapatan">Salin Data</button>
     </div>
-    <p class="sub">Urutan sesuai kolom di Spreadsheet REAL. "Nisbah Hapus Buku" &amp; "Basil AKA Pusat" selalu dikosongkan sesuai aturan.</p>
-    <div class="table-wrap">
+    <div class="table-wrap" style="max-width:480px; margin:14px auto 0;">
       <table>
-        <thead><tr><th>PENDAPATAN</th><th style="width:120px;">NOMINAL</th></tr></thead>
+        <thead><tr><th style="width:60%;">PENDAPATAN</th><th style="width:120px;">NOMINAL</th></tr></thead>
         <tbody id="pendapatanBody"></tbody>
       </table>
-    </div>
-    <div class="note">
-      Rumus: <b>Nisbah Pembiayaan</b> = jumlah semua baris <code>NISBAH/BASIL...</code> ·
-      <b>Provisi</b> = jumlah semua baris <code>PROVISI&amp;ADM. PBY...</code> ·
-      <b>PPJ</b> = baris <code>PDPT - BAGI HASIL PERPANJANGAN</code> ·
-      <b>Penalty dll</b> = Pynalti Simp Berjangka + Adm Simpanan + Tutup Rekening + PPOB ABS + Fee Transfer via PG ·
-      <b>Non Operasional Lainnya</b> = baris <code>PENDAPATAN LAINNYA</code>. Semua diambil dari kolom tengah.
     </div>
   </div>
 
   <div class="card hidden" id="cardBeban">
     <div class="card-head">
-      <h2>3. Beban Operasional (kolom tengah)</h2>
-      <button class="secondary" id="copyBeban">Salin kolom nilai</button>
+      <h2>3. Beban Operasional</h2>
+      <button class="secondary" id="copyBeban">Salin Data</button>
     </div>
-    <p class="sub">Baris sudah diurutkan &amp; diberi nama sesuai kolom "Beban Umum &amp; Adm" di Spreadsheet, tinggal salin nilainya lalu tempel vertikal. Baris <b>INSENTIF</b> = BIAYA INSENTIF + INSENTIF MANAGER. Baris tanpa data di PDF bulan ini akan tampil 0.</p>
-    <div class="table-wrap">
+    <div class="table-wrap" style="max-width:480px; margin:14px auto 0;">
       <table>
-        <thead><tr><th>Beban-Beban</th><th style="width:120px;">Nominal</th></tr></thead>
+        <thead><tr><th style="width:60%;">Beban-Beban</th><th style="width:120px;">Nominal</th></tr></thead>
         <tbody id="bebanBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card hidden" id="cardTotal">
+    <div class="card-head">
+      <h2>4. Total &amp; SHU</h2>
+    </div>
+    <div class="table-wrap" style="max-width:480px; margin:14px auto 0;">
+      <table>
+        <thead><tr><th style="width:60%;">Keterangan</th><th style="width:120px;">Nominal</th></tr></thead>
+        <tbody id="totalBody"></tbody>
       </table>
     </div>
   </div>
@@ -386,7 +388,16 @@
       : [];
     const beban = buildOrderedBeban(bebanRawRows, insentifManagerRow);
 
-    return { pendapatan, beban };
+    const totalPendapatanRow = rows.find(r => r.name.toUpperCase().includes('TOTAL PENDAPATAN'));
+    const totalBiayaRow = rows.find(r => r.name.toUpperCase().includes('TOTAL BIAYA'));
+    const shuNettRow = extractLabeledLine(allLines, /SHU\s*NETT/i);
+    const total = [
+      { label: 'TOTAL PENDAPATAN', value: totalPendapatanRow ? totalPendapatanRow.tengah : null },
+      { label: 'TOTAL BIAYA', value: totalBiayaRow ? totalBiayaRow.tengah : null },
+      { label: 'SHU NETT. (SHU BULAN INI)', value: shuNettRow ? shuNettRow.tengah : null },
+    ];
+
+    return { pendapatan, beban, total };
   }
 
   function renderPendapatan(list) {
@@ -414,6 +425,18 @@
     document.getElementById('cardBeban').classList.remove('hidden');
   }
 
+  function renderTotal(list) {
+    const tbody = document.getElementById('totalBody');
+    tbody.innerHTML = '';
+    list.forEach(item => {
+      const valStr = item.value === null ? '0' : fmtID(item.value);
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td><b>' + escapeHtml(item.label) + '</b></td><td class="num"><b>' + valStr + '</b></td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('cardTotal').classList.remove('hidden');
+  }
+
   document.getElementById('copyPendapatan').addEventListener('click', async () => {
     if (!lastPendapatan) return;
     const text = lastPendapatan.map(it => it.value === null ? '0' : String(Math.round(it.value))).join('\n');
@@ -436,9 +459,10 @@
       const allLines = await extractLines(selectedFile);
       const rows = parseRows(allLines);
       if (!rows.length) throw new Error('Tidak ada baris data yang terbaca -- pastikan PDF berisi teks (bukan hasil scan).');
-      const { pendapatan, beban } = classify(allLines, rows);
+      const { pendapatan, beban, total } = classify(allLines, rows);
       renderPendapatan(pendapatan);
       renderBeban(beban);
+      renderTotal(total);
       statusEl.textContent = 'Selesai. ' + rows.length + ' baris data terbaca, ' + beban.length + ' baris Beban Operasional ditemukan.';
     } catch (err) {
       statusEl.textContent = 'Gagal: ' + err.message;
