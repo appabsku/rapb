@@ -42,6 +42,22 @@
   }
   header h1{margin:0 0 6px; font-size:24px; letter-spacing:.2px;}
   header p{margin:0; opacity:.85; font-size:13.5px;}
+  nav.menu{
+    max-width:640px; margin:14px auto 0;
+    display:flex; justify-content:center; gap:10px; flex-wrap:wrap;
+  }
+  nav.menu a{
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.35);
+    color:#fff; text-decoration:none;
+    padding:8px 16px; border-radius:20px; font-size:12.5px; font-weight:600;
+    transition:.15s background,.15s transform;
+  }
+  nav.menu a:hover{background:rgba(255,255,255,.22); transform:translateY(-1px);}
+  nav.menu a.aktif{
+    background:var(--emas); color:var(--biru-tua); border-color:var(--emas);
+  }
   main{max-width:760px; margin:-26px auto 60px; padding:0 20px;}
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:16px;
@@ -107,12 +123,18 @@
       <h1>RAPB BULANAN</h1>
     </div>
   </div>
+  <nav class="menu">
+    <a href="https://appabsku.github.io/checker/">🧾 APK CHECKER</a>
+    <a href="https://appabsku.github.io/nisbah/">📊 ANALISA NISBAH</a>
+    <a href="https://appabsku.github.io/datakol/">📑 Ekstrak 234</a>
+    <a href="https://appabsku.github.io/rapb/" class="aktif">🧾 RAPB</a>
+    <a href="https://appabsku.github.io/checker/">🧮 KAL AKP</a>
+  </nav>
 </header>
 
 <main>
   <div class="card">
-    <h2>1. Upload PDF PHU</h2>
-    <p class="sub">File "PERHITUNGAN HASIL USAHA/PHU" bulanan (format sama seperti yang dipakai KSPPS Artha Bahana Syariah).</p>
+    <h2>1. Upload PDF</h2>
     <label class="drop" id="drop">
       <input type="file" id="file" accept=".pdf,application/pdf">
       <div><strong>Klik atau seret file PDF</strong> ke sini</div>
@@ -298,11 +320,11 @@
     ['LEMBUR', ['LEMBUR']],
     ['THR', ['THR']],
     ['PESANGON', []],
-    ['Perawatan Gedung', []],
+    ['Perawatan Gedung', ['PEMELIHARAAN DAN SEWA']],
     ['Perawatan Kendaraan', ['PERAWATAN KENDARAAN']],
     ['Perawatan Komputer dan Printer', ['PERAWATAN KOMPUTER']],
     ['Perawatan AC', ['PERAWATAN AC']],
-    ['Perawatan Sewa program', ['PEMELIHARAAN DAN SEWA']],
+    ['Perawatan Sewa program', []],
     ['Peny Gedung/Sewa Gedung', ['PENYUSUTAN SEWA GEDUNG']],
     ['Peny Inventaris', ['PENYUSUTAN INVENTARIS']],
     ['Peny Perlengkapan', ['PENYUSUTAN PERLENGKAPAN']],
